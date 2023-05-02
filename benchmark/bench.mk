@@ -9,11 +9,12 @@
 GRAPH_DIR = benchmark/graphs
 RAW_GRAPH_DIR = benchmark/graphs/raw
 
-GRAPHS = twitter web road kron urand
+GRAPHS = twitter
+# twitter web road kron urand
 ALL_GRAPHS =\
 	$(addsuffix .sg, $(GRAPHS)) \
-	$(addsuffix .wsg, $(GRAPHS)) \
-	$(addsuffix U.sg, $(GRAPHS))
+	# $(addsuffix .wsg, $(GRAPHS)) \
+	# $(addsuffix U.sg, $(GRAPHS))
 ALL_GRAPHS_WITH_PATHS = $(addprefix $(GRAPH_DIR)/, $(ALL_GRAPHS))
 
 $(RAW_GRAPH_DIR):
@@ -40,11 +41,11 @@ $(RAW_GRAPH_DIR)/twitter.el: $(RAW_GRAPH_DIR)/twitter_rv.net
 $(GRAPH_DIR)/twitter.sg: $(RAW_GRAPH_DIR)/twitter.el converter
 	./converter -f $< -b $@
 
-$(GRAPH_DIR)/twitter.wsg: $(RAW_GRAPH_DIR)/twitter.el converter
-	./converter -f $< -wb $@
+# $(GRAPH_DIR)/twitter.wsg: $(RAW_GRAPH_DIR)/twitter.el converter
+# 	./converter -f $< -wb $@
 
-$(GRAPH_DIR)/twitterU.sg: $(RAW_GRAPH_DIR)/twitter.el converter
-	./converter -sf $< -b $@
+# $(GRAPH_DIR)/twitterU.sg: $(RAW_GRAPH_DIR)/twitter.el converter
+# 	./converter -sf $< -b $@
 
 ROAD_URL = http://www.dis.uniroma1.it/challenge9/data/USA-road-d/USA-road-d.USA.gr.gz
 $(RAW_GRAPH_DIR)/USA-road-d.USA.gr.gz:

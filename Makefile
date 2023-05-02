@@ -1,7 +1,8 @@
 # See LICENSE.txt for license details.
 
-CXX_FLAGS += -std=c++11 -O3 -Wall
+CXX_FLAGS += -std=c++17 -O3 -Wall
 PAR_FLAG = -fopenmp
+# SERIAL = 1
 
 ifneq (,$(findstring icpc,$(CXX)))
 	PAR_FLAG = -openmp
@@ -16,14 +17,15 @@ ifneq ($(SERIAL), 1)
 	CXX_FLAGS += $(PAR_FLAG)
 endif
 
-KERNELS = bc bfs cc cc_sv pr pr_spmv sssp tc
+KERNELS = bfs 
+# bc bfs cc cc_sv pr pr_spmv sssp tc
 SUITE = $(KERNELS) converter
 
 .PHONY: all
 all: $(SUITE)
 
 % : src/%.cc src/*.h
-	$(CXX) $(CXX_FLAGS) $< -o $@
+	$(CXX) $(CXX_FLAGS) $< -o $@ -lnuma
 
 # Testing
 include test/test.mk
