@@ -36,10 +36,10 @@ public:
   explicit SlidingQueue(size_t shared_size) {
     // std::cout << "shared_size: " << shared_size << "\n" << std::flush;
     shared = new T[shared_size];
-    std::cout << "shared sliding queue: " << shared << " ; "
-              << static_cast<intptr_t>(reinterpret_cast<intptr_t>(shared))
-              << "\n"
-              << std::flush;
+    // std::cout << "shared sliding queue: " << shared << " ; "
+    //           << static_cast<intptr_t>(reinterpret_cast<intptr_t>(shared))
+    //           << "\n"
+    //           << std::flush;
     reset();
   }
 
@@ -81,20 +81,23 @@ public:
     in = 0;
     // how to replace this statement using numalib?
     local_queue = new T[local_size];
-    // std::cout << "local size: " << local_size << " given_size: " <<
-    // given_size
-    //           << "\n"
-    //           << std::flush;
+    // const size_t objectSize = sizeof(T);
+    // void *memory = numa_alloc_onnode(local_size * objectSize, 1);
 
-    // std::cout << "local_queue: " << local_queue << " ; "
-    //           <<
-    //           static_cast<intptr_t>(reinterpret_cast<intptr_t>(local_queue))
-    //           << "\n"
+    // for (int i = 0; i < 16384; ++i) {
+    //   void *objectMemory = static_cast<char *>(memory) + i * objectSize;
+    //   void *object = new (objectMemory) T;
+    // }
+    // local_queue = static_cast<T *>(memory);
+
+    // std::cout << "local size in constructor: " << local_size << "\n"
     //           << std::flush;
-    // sleep(1);
   }
 
-  ~QueueBuffer() { delete[] local_queue; }
+  ~QueueBuffer() {
+    delete[] local_queue;
+    // numa_free(local_queue, local_size * sizeof(T));
+  }
 
   void push_back(T to_add) {
     if (in == local_size)

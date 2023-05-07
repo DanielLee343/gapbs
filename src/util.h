@@ -4,12 +4,15 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
-#include <stdio.h>
 #include <cinttypes>
+#include <execinfo.h>
+#include <filesystem>
+#include <stdio.h>
 #include <string>
 
 #include "timer.h"
-
+const char vtune_bin[] = "/opt/intel/oneapi/vtune/2023.1.0/bin64/vtune";
+const char damo_bin[] = "/home/cc/damo/damo";
 
 /*
 GAP Benchmark Suite
@@ -18,9 +21,7 @@ Author: Scott Beamer
 Miscellaneous helpers that don't fit into classes
 */
 
-
 static const int64_t kRandSeed = 27491095;
-
 
 void PrintLabel(const std::string &label, const std::string &val) {
   printf("%-21s%7s\n", (label + ":").c_str(), val.c_str());
@@ -49,37 +50,91 @@ void PrintStep(const std::string &s, double seconds, int64_t count = -1) {
 }
 
 // Runs op and prints the time it took to execute labelled by label
-#define TIME_PRINT(label, op) {   \
-  Timer t_;                       \
-  t_.Start();                     \
-  (op);                           \
-  t_.Stop();                      \
-  PrintTime(label, t_.Seconds()); \
+#define TIME_PRINT(label, op)                                                  \
+  {                                                                            \
+    Timer t_;                                                                  \
+    t_.Start();                                                                \
+    (op);                                                                      \
+    t_.Stop();                                                                 \
+    PrintTime(label, t_.Seconds());                                            \
+  }
+
+void run_vtune_bg(pid_t cur_pid) {
+  std::cout << "running vtune \n" << std::flush;
+  char vtune_cmd[200];
+  char vtune_path[] =
+      "/home/cc/functions/run_bench/vtune_log/gapbs_pr_twitter_whole";
+  std::filesystem::path dir_path(vtune_path);
+  if (std::filesystem::exists(dir_path)) {
+    if (!std::filesystem::is_empty(dir_path)) {
+      for (const auto &entry : std::filesystem::directory_iterator(dir_path)) {
+        if (entry.is_regular_file()) {
+          std::filesystem::remove(entry.path());
+        }
+      }
+    }
+  }
+  std::sprintf(vtune_cmd, "%s -collect uarch-exploration -r %s -target-pid %d",
+               vtune_bin, vtune_path, cur_pid);
+  int ret = system(vtune_cmd);
+  if (ret == -1) {
+    std::cerr << "Error: failed to execute command" << std::flush;
+    exit(EXIT_FAILURE);
+  }
+  exit(EXIT_SUCCESS);
 }
 
+void run_damo_bg(pid_t cur_pid) {
+  std::cout << "running damo \n" << std::flush;
+  char damo_cmd[200];
+  char damo_path[] = "/home/cc/functions/run_bench/playground/"
+                     "gapbs_pr_twitter_whole/gapbs_pr_twitter_whole.data";
+  std::sprintf(
+      damo_cmd,
+      // "sudo %s record -s 1000 -a 100000 -u 1000000 -n 1024 -m 1024 -o %s %d",
+      "sudo %s record -s 1000 -a 100000 -u 1000000 "
+      "-n 10000 -m 15000 -o %s %d",
+      damo_bin, damo_path, cur_pid);
+  int ret = system(damo_cmd);
+  if (ret == -1) {
+    std::cerr << "Error: failed to execute command" << std::flush;
+    exit(EXIT_FAILURE);
+  }
+  exit(EXIT_SUCCESS);
+}
+void GetCurTime(const char *identifier) {
+  auto now = std::chrono::system_clock::now();
+  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+  auto fraction = now - seconds;
 
-template <typename T_>
-class RangeIter {
+  std::cout << identifier << " at: " << seconds.time_since_epoch().count()
+            << "." << fraction.count() << "\n"
+            << std::flush;
+  // std::cout  << " nanoseconds within current second\n";
+}
+
+template <typename T_> class RangeIter {
   T_ x_;
- public:
+
+public:
   explicit RangeIter(T_ x) : x_(x) {}
-  bool operator!=(RangeIter const& other) const { return x_ != other.x_; }
-  T_ const& operator*() const { return x_; }
-  RangeIter& operator++() {
+  bool operator!=(RangeIter const &other) const { return x_ != other.x_; }
+  T_ const &operator*() const { return x_; }
+  RangeIter &operator++() {
     ++x_;
     return *this;
   }
 };
 
-template <typename T_>
-class Range{
+template <typename T_> class Range {
   T_ from_;
   T_ to_;
- public:
+
+public:
   explicit Range(T_ to) : from_(0), to_(to) {}
   Range(T_ from, T_ to) : from_(from), to_(to) {}
   RangeIter<T_> begin() const { return RangeIter<T_>(from_); }
   RangeIter<T_> end() const { return RangeIter<T_>(to_); }
 };
 
-#endif  // UTIL_H_
+#endif // UTIL_H_

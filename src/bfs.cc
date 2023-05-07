@@ -45,8 +45,8 @@ them in parent array as negative numbers. Thus the encoding of parent is:
 */
 
 using namespace std;
-const char vtune_bin[] = "/opt/intel/oneapi/vtune/2023.1.0/bin64/vtune";
-const char damo_bin[] = "/home/cc/damo/damo";
+// const char vtune_bin[] = "/opt/intel/oneapi/vtune/2023.1.0/bin64/vtune";
+// const char damo_bin[] = "/home/cc/damo/damo";
 
 int64_t BUStep(const Graph &g, pvector<NodeID> &parent, Bitmap &front,
                Bitmap &next) {
@@ -87,8 +87,8 @@ int64_t TDStep(const Graph &g, pvector<NodeID> &parent,
     //   QueueBuffer<T> *object = new (objectMemory) QueueBuffer<T>(i);
     // }
 
-    std::cout << "TDStep addr: " << &lqueue << "\n" << std::flush;
-    std::cout << "TDStep size: " << sizeof(lqueue) << "\n" << std::flush;
+    // std::cout << "TDStep addr: " << &lqueue << "\n" << std::flush;
+    // std::cout << "TDStep size: " << sizeof(lqueue) << "\n" << std::flush;
 #pragma omp for reduction(+ : scout_count) nowait
     for (auto q_iter = queue.begin(); q_iter < queue.end(); q_iter++) {
       NodeID u = *q_iter;
@@ -120,8 +120,9 @@ void BitmapToQueue(const Graph &g, const Bitmap &bm,
 #pragma omp parallel
   {
     QueueBuffer<NodeID> lqueue(queue);
-    std::cout << "BitmapToQueue addr: " << &lqueue << "\n" << std::flush;
-    std::cout << "BitmapToQueue size: " << sizeof(lqueue) << "\n" << std::flush;
+    // std::cout << "BitmapToQueue addr: " << &lqueue << "\n" << std::flush;
+    // std::cout << "BitmapToQueue size: " << sizeof(lqueue) << "\n" <<
+    // std::flush;
 #pragma omp for nowait
     for (NodeID n = 0; n < g.num_nodes(); n++)
       if (bm.get_bit(n))
@@ -270,59 +271,6 @@ bool BFSVerifier(const Graph &g, NodeID source, const pvector<NodeID> &parent) {
     }
   }
   return true;
-}
-
-void GetCurTime(const char *identifier) {
-  auto now = std::chrono::system_clock::now();
-  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
-  auto fraction = now - seconds;
-
-  std::cout << identifier << " at: " << seconds.time_since_epoch().count()
-            << "." << fraction.count() << "\n"
-            << std::flush;
-  // std::cout  << " nanoseconds within current second\n";
-}
-
-void run_vtune_bg(pid_t cur_pid) {
-  cout << "running vtune \n" << std::flush;
-  char vtune_cmd[200];
-  char vtune_path[] =
-      "/home/cc/functions/run_bench/vtune_log/gapbs_bfs_twitter_whole";
-  std::filesystem::path dir_path(vtune_path);
-  if (std::filesystem::exists(dir_path)) {
-    if (!std::filesystem::is_empty(dir_path)) {
-      for (const auto &entry : std::filesystem::directory_iterator(dir_path)) {
-        if (entry.is_regular_file()) {
-          std::filesystem::remove(entry.path());
-        }
-      }
-    }
-  }
-  std::sprintf(vtune_cmd, "%s -collect uarch-exploration -r %s -target-pid %d",
-               vtune_bin, vtune_path, cur_pid);
-  int ret = system(vtune_cmd);
-  if (ret == -1) {
-    std::cerr << "Error: failed to execute command" << std::flush;
-    exit(EXIT_FAILURE);
-  }
-  exit(EXIT_SUCCESS);
-}
-
-void run_damo_bg(pid_t cur_pid) {
-  cout << "running damo \n" << std::flush;
-  char damo_cmd[200];
-  char damo_path[] = "/home/cc/functions/run_bench/playground/"
-                     "gapbs_bfs_twitter_whole/gapbs_bfs_twitter_whole.data";
-  std::sprintf(
-      damo_cmd,
-      "sudo %s record -s 1000 -a 100000 -u 1000000 -n 1024 -m 1024 -o %s %d",
-      damo_bin, damo_path, cur_pid);
-  int ret = system(damo_cmd);
-  if (ret == -1) {
-    std::cerr << "Error: failed to execute command" << std::flush;
-    exit(EXIT_FAILURE);
-  }
-  exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

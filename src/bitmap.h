@@ -24,10 +24,10 @@ public:
   explicit Bitmap(size_t size) {
     uint64_t num_words = (size + kBitsPerWord - 1) / kBitsPerWord;
     start_ = new uint64_t[num_words]; // 8 bytes * num_words
-    std::cout << "bitmap: " << start_ << " ; "
-              << static_cast<intptr_t>(reinterpret_cast<intptr_t>(start_))
-              << "\n"
-              << std::flush;
+    // std::cout << "bitmap: " << start_ << " ; "
+    //           << static_cast<intptr_t>(reinterpret_cast<intptr_t>(start_))
+    //           << "\n"
+    //           << std::flush;
     end_ = start_ + num_words;
   }
 

@@ -25,10 +25,10 @@ public:
 
   explicit pvector(size_t num_elements) {
     start_ = new T_[num_elements];
-    std::cout << "pvector start_: " << start_ << " ; "
-              << static_cast<intptr_t>(reinterpret_cast<intptr_t>(start_))
-              << "\n"
-              << std::flush;
+    // std::cout << "pvector start_: " << start_ << " ; "
+    //           << static_cast<intptr_t>(reinterpret_cast<intptr_t>(start_))
+    //           << "\n"
+    //           << std::flush;
     end_size_ = start_ + num_elements;
     end_capacity_ = end_size_;
   }

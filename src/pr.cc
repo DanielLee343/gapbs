@@ -2,7 +2,9 @@
 // See LICENSE.txt for license details
 
 #include <algorithm>
+
 #include <iostream>
+#include <unistd.h>
 #include <vector>
 
 #include "benchmark.h"
@@ -10,6 +12,7 @@
 #include "command_line.h"
 #include "graph.h"
 #include "pvector.h"
+#include "util.h"
 
 /*
 GAP Benchmark Suite
@@ -24,26 +27,31 @@ new values to be immediately visible (like Gauss-Seidel method). The prior PR
 implemention is still available in src/pr_spmv.cc.
 */
 
-
 using namespace std;
 
 typedef float ScoreT;
 const float kDamp = 0.85;
 
-
 pvector<ScoreT> PageRankPullGS(const Graph &g, int max_iters,
-                             double epsilon = 0) {
+                               double epsilon = 0) {
   const ScoreT init_score = 1.0f / g.num_nodes();
   const ScoreT base_score = (1.0f - kDamp) / g.num_nodes();
   pvector<ScoreT> scores(g.num_nodes(), init_score);
+  std::cout << "scores addr: " << &scores << "\n" << std::flush;
+  std::cout << "scores size: " << sizeof(scores) << "\n" << std::flush;
   pvector<ScoreT> outgoing_contrib(g.num_nodes());
-  #pragma omp parallel for
-  for (NodeID n=0; n < g.num_nodes(); n++)
+  std::cout << "outgoing_contrib addr: " << &outgoing_contrib << "\n"
+            << std::flush;
+  std::cout << "outgoing_contrib size: " << sizeof(outgoing_contrib) << "\n"
+            << std::flush;
+
+#pragma omp parallel for
+  for (NodeID n = 0; n < g.num_nodes(); n++)
     outgoing_contrib[n] = init_score / g.out_degree(n);
-  for (int iter=0; iter < max_iters; iter++) {
+  for (int iter = 0; iter < max_iters; iter++) {
     double error = 0;
-    #pragma omp parallel for reduction(+ : error) schedule(dynamic, 16384)
-    for (NodeID u=0; u < g.num_nodes(); u++) {
+#pragma omp parallel for reduction(+ : error) schedule(dynamic, 16384)
+    for (NodeID u = 0; u < g.num_nodes(); u++) {
       ScoreT incoming_total = 0;
       for (NodeID v : g.in_neigh(u))
         incoming_total += outgoing_contrib[v];
@@ -52,17 +60,16 @@ pvector<ScoreT> PageRankPullGS(const Graph &g, int max_iters,
       error += fabs(scores[u] - old_score);
       outgoing_contrib[u] = scores[u] / g.out_degree(u);
     }
-    printf(" %2d    %lf\n", iter, error);
+    // printf(" %2d    %lf\n", iter, error);
     if (error < epsilon)
       break;
   }
   return scores;
 }
 
-
 void PrintTopScores(const Graph &g, const pvector<ScoreT> &scores) {
   vector<pair<NodeID, ScoreT>> score_pairs(g.num_nodes());
-  for (NodeID n=0; n < g.num_nodes(); n++) {
+  for (NodeID n = 0; n < g.num_nodes(); n++) {
     score_pairs[n] = make_pair(n, scores[n]);
   }
   int k = 5;
@@ -72,11 +79,10 @@ void PrintTopScores(const Graph &g, const pvector<ScoreT> &scores) {
     cout << kvp.second << ":" << kvp.first << endl;
 }
 
-
 // Verifies by asserting a single serial iteration in push direction has
 //   error < target_error
 bool PRVerifier(const Graph &g, const pvector<ScoreT> &scores,
-                        double target_error) {
+                double target_error) {
   const ScoreT base_score = (1.0f - kDamp) / g.num_nodes();
   pvector<ScoreT> incomming_sums(g.num_nodes(), 0);
   double error = 0;
@@ -93,19 +99,45 @@ bool PRVerifier(const Graph &g, const pvector<ScoreT> &scores,
   return error < target_error;
 }
 
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
+  GetCurTime("whole start");
   CLPageRank cli(argc, argv, "pagerank", 1e-4, 20);
   if (!cli.ParseArgs())
     return -1;
   Builder b(cli);
   Graph g = b.MakeGraph();
-  auto PRBound = [&cli] (const Graph &g) {
+  std::cout << "graph addr: " << &g << "\n" << std::flush;
+  std::cout << "graph size: " << sizeof(g) << "\n" << std::flush;
+  auto PRBound = [&cli](const Graph &g) {
     return PageRankPullGS(g, cli.max_iters(), cli.tolerance());
   };
-  auto VerifierBound = [&cli] (const Graph &g, const pvector<ScoreT> &scores) {
+  auto VerifierBound = [&cli](const Graph &g, const pvector<ScoreT> &scores) {
     return PRVerifier(g, scores, cli.tolerance());
   };
+  pid_t cur_pid = getpid();
+  if (cli.do_vtune()) {
+    std::cout << "get into do vtune\n" << std::flush;
+    pid_t vtune_pid = fork();
+    if (vtune_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (vtune_pid == 0) {
+      run_vtune_bg(cur_pid);
+    }
+  }
+  if (cli.do_heatmap()) {
+    std::cout << "get into do damo\n" << std::flush;
+    pid_t damo_pid = fork();
+    if (damo_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (damo_pid == 0) {
+      run_damo_bg(cur_pid);
+    }
+  }
+
+  GetCurTime("computing start");
   BenchmarkKernel(cli, g, PRBound, PrintTopScores, VerifierBound);
+  GetCurTime("all finish");
   return 0;
 }
