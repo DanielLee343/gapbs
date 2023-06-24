@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Error: fork() failed" << std::flush;
       exit(EXIT_FAILURE);
     } else if (damo_pid == 0) {
-      run_damo_bg(cur_pid);
+    	run_damo_bg(cur_pid, argv[argc-1]);
     }
   }
 

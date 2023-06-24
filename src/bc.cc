@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <unistd.h> 
 
 #include "benchmark.h"
 #include "bitmap.h"
@@ -227,6 +228,7 @@ bool BCVerifier(const Graph &g, SourcePicker<Graph> &sp, NodeID num_iters,
 
 
 int main(int argc, char* argv[]) {
+  GetCurTime("whole start");
   CLIterApp cli(argc, argv, "betweenness-centrality", 1);
   if (!cli.ParseArgs())
     return -1;
@@ -242,6 +244,32 @@ int main(int argc, char* argv[]) {
                                      const pvector<ScoreT> &scores) {
     return BCVerifier(g, vsp, cli.num_iters(), scores);
   };
+
+
+  pid_t cur_pid = getpid();
+  if (cli.do_vtune()) {
+    // std::cout << "get into do vtune\n" << std::flush;
+    pid_t vtune_pid = fork();
+    if (vtune_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (vtune_pid == 0) {
+      run_vtune_bg(cur_pid);
+    }
+  }
+  if (cli.do_heatmap()) {
+    std::cout << "get into do damo\n" << std::flush;
+    pid_t damo_pid = fork();
+    if (damo_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (damo_pid == 0) {
+    	run_damo_bg(cur_pid, argv[argc-1]);
+    }
+  }
+
+  GetCurTime("computing start");
   BenchmarkKernel(cli, g, BCBound, PrintTopScores, VerifierBound);
+  GetCurTime("all finish");
   return 0;
 }

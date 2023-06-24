@@ -6,6 +6,7 @@
 #include <limits>
 #include <queue>
 #include <vector>
+#include <unistd.h> 
 
 #include "benchmark.h"
 #include "builder.h"
@@ -186,16 +187,16 @@ bool SSSPVerifier(const WGraph &g, NodeID source,
   return all_ok;
 }
 
-void GetCurTime(const char *identifier) {
-  auto now = std::chrono::system_clock::now();
-  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
-  auto fraction = now - seconds;
-
-  std::cout << identifier << " at: " << seconds.time_since_epoch().count()
-            << "." << fraction.count() << "\n"
-            << std::flush;
-  // std::cout  << " nanoseconds within current second\n";
-}
+//void GetCurTime(const char *identifier) {
+//  auto now = std::chrono::system_clock::now();
+//  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+//  auto fraction = now - seconds;
+//
+//  std::cout << identifier << " at: " << seconds.time_since_epoch().count()
+//            << "." << fraction.count() << "\n"
+//            << std::flush;
+//  // std::cout  << " nanoseconds within current second\n";
+//}
 
 int main(int argc, char *argv[]) {
   GetCurTime("whole start");
@@ -212,6 +213,34 @@ int main(int argc, char *argv[]) {
   auto VerifierBound = [&vsp](const WGraph &g, const pvector<WeightT> &dist) {
     return SSSPVerifier(g, vsp.PickNext(), dist);
   };
+  
+
+  pid_t cur_pid = getpid();
+  if (cli.do_vtune()) {
+    // std::cout << "get into do vtune\n" << std::flush;
+    pid_t vtune_pid = fork();
+    if (vtune_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (vtune_pid == 0) {
+      run_vtune_bg(cur_pid);
+    }
+  }
+  if (cli.do_heatmap()) {
+    std::cout << "get into do damo\n" << std::flush;
+    pid_t damo_pid = fork();
+    if (damo_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (damo_pid == 0) {
+    	run_damo_bg(cur_pid, argv[argc-1]);
+    }
+  }
+
+
+
+  GetCurTime("computing start");
   BenchmarkKernel(cli, g, SSSPBound, PrintSSSPStats, VerifierBound);
+  GetCurTime("all finish");
   return 0;
 }

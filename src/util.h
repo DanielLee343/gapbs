@@ -13,6 +13,7 @@
 #include "timer.h"
 const char vtune_bin[] = "/opt/intel/oneapi/vtune/2023.1.0/bin64/vtune";
 const char damo_bin[] = "/home/cc/damo/damo";
+// const char damo_bin[] = "damo";
 
 /*
 GAP Benchmark Suite
@@ -63,7 +64,7 @@ void run_vtune_bg(pid_t cur_pid) {
   std::cout << "running vtune \n" << std::flush;
   char vtune_cmd[200];
   char vtune_path[] =
-      "/home/cc/functions/run_bench/vtune_log/gapbs_pr_twitter_whole";
+      "/home/cc/functions/run_bench/vtune_log/gapbs_cc_twitter_whole";
   std::filesystem::path dir_path(vtune_path);
   if (std::filesystem::exists(dir_path)) {
     if (!std::filesystem::is_empty(dir_path)) {
@@ -84,17 +85,19 @@ void run_vtune_bg(pid_t cur_pid) {
   exit(EXIT_SUCCESS);
 }
 
-void run_damo_bg(pid_t cur_pid) {
+void run_damo_bg(pid_t cur_pid, char* damo_path) {
   std::cout << "running damo \n" << std::flush;
-  char damo_cmd[200];
-  char damo_path[] = "/home/cc/functions/run_bench/playground/"
-                     "gapbs_pr_twitter_whole/gapbs_pr_twitter_whole.data";
+  char damo_cmd[300];
+  char damo_path_[150];
+  std::sprintf(damo_path_, "/home/cc/functions/run_bench/playground/%s/%s.data",
+               damo_path, damo_path);
+  
   std::sprintf(
       damo_cmd,
       // "sudo %s record -s 1000 -a 100000 -u 1000000 -n 1024 -m 1024 -o %s %d",
       "sudo %s record -s 1000 -a 100000 -u 1000000 "
-      "-n 10000 -m 15000 -o %s %d",
-      damo_bin, damo_path, cur_pid);
+      "-n 5000 -m 6000 -o %s %d",
+      damo_bin, damo_path_, cur_pid);
   int ret = system(damo_cmd);
   if (ret == -1) {
     std::cerr << "Error: failed to execute command" << std::flush;
@@ -102,15 +105,24 @@ void run_damo_bg(pid_t cur_pid) {
   }
   exit(EXIT_SUCCESS);
 }
-void GetCurTime(const char *identifier) {
-  auto now = std::chrono::system_clock::now();
-  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
-  auto fraction = now - seconds;
 
-  std::cout << identifier << " at: " << seconds.time_since_epoch().count()
-            << "." << fraction.count() << "\n"
-            << std::flush;
+void GetCurTime(const char *identifier) {
+  // auto now = std::chrono::system_clock::now();
+  // auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+  // auto fraction = now - seconds;
+
+  // std::cout << identifier << " at: " << seconds.time_since_epoch().count()
+  //           << "." << fraction.count() << "\n"
+  //           << std::flush;
   // std::cout  << " nanoseconds within current second\n";
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  // printf("%s at: %ld.%ld\n", identifier, ts.tv_sec, ts.tv_nsec);
+  // if (ts.tv_nsec < 1000000000) {
+  //   std::cout << identifier << " at: " << ts.tv_sec << "0" << ts.tv_nsec << "\n" << std::flush;
+  // }else {
+  std::cout << identifier << " at: " << ts.tv_sec << "." << ts.tv_nsec << "\n" << std::flush;
+  // }
 }
 
 template <typename T_> class RangeIter {

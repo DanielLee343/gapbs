@@ -301,13 +301,13 @@ int main(int argc, char *argv[]) {
     }
   }
   if (cli.do_heatmap()) {
-    // std::cout << "get into do damo\n" << std::flush;
+    std::cout << "get into do damo\n" << std::flush;
     pid_t damo_pid = fork();
     if (damo_pid == -1) {
       std::cerr << "Error: fork() failed" << std::flush;
       exit(EXIT_FAILURE);
     } else if (damo_pid == 0) {
-      run_damo_bg(cur_pid);
+    	run_damo_bg(cur_pid, argv[argc-1]);
     }
   }
 

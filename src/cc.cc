@@ -6,6 +6,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <unistd.h> 
 
 #include "benchmark.h"
 #include "bitmap.h"
@@ -14,7 +15,7 @@
 #include "graph.h"
 #include "pvector.h"
 #include "timer.h"
-
+#include "util.h"
 
 /*
 GAP Benchmark Suite
@@ -216,12 +217,38 @@ bool CCVerifier(const Graph &g, const pvector<NodeID> &comp) {
 
 
 int main(int argc, char* argv[]) {
+  GetCurTime("whole start");
   CLApp cli(argc, argv, "connected-components-afforest");
   if (!cli.ParseArgs())
     return -1;
   Builder b(cli);
   Graph g = b.MakeGraph();
   auto CCBound = [](const Graph& gr){ return Afforest(gr); };
+  
+  pid_t cur_pid = getpid();
+  if (cli.do_vtune()) {
+    // std::cout << "get into do vtune\n" << std::flush;
+    pid_t vtune_pid = fork();
+    if (vtune_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (vtune_pid == 0) {
+      run_vtune_bg(cur_pid);
+    }
+  }
+  if (cli.do_heatmap()) {
+    std::cout << "get into do damo\n" << std::flush;
+    pid_t damo_pid = fork();
+    if (damo_pid == -1) {
+      std::cerr << "Error: fork() failed" << std::flush;
+      exit(EXIT_FAILURE);
+    } else if (damo_pid == 0) {
+      run_damo_bg(cur_pid, argv[argc-1]);
+    }
+  }
+
+  GetCurTime("computing start");
   BenchmarkKernel(cli, g, CCBound, PrintCompStats, CCVerifier);
+  GetCurTime("all finish");
   return 0;
 }
