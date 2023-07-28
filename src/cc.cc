@@ -84,10 +84,10 @@ NodeID SampleFrequentElement(const pvector<NodeID>& comp,
     sample_counts.begin(), sample_counts.end(),
     [](const kvp_type& a, const kvp_type& b) { return a.second < b.second; });
   float frac_of_graph = static_cast<float>(most_frequent->second) / num_samples;
-  std::cout
-    << "Skipping largest intermediate component (ID: " << most_frequent->first
-    << ", approx. " << static_cast<int>(frac_of_graph * 100)
-    << "% of the graph)" << std::endl;
+  // std::cout
+  //   << "Skipping largest intermediate component (ID: " << most_frequent->first
+  //   << ", approx. " << static_cast<int>(frac_of_graph * 100)
+  //   << "% of the graph)" << std::endl;
   return most_frequent->first;
 }
 

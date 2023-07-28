@@ -17,8 +17,8 @@ ifneq ($(SERIAL), 1)
 	CXX_FLAGS += $(PAR_FLAG)
 endif
 
-KERNELS = pr bc bfs
-# bc  cc cc_sv pr pr_spmv sssp tc
+KERNELS = pr cc bc bfs
+# bc bfs cc cc_sv pr pr_spmv sssp tc
 SUITE = $(KERNELS) converter
 
 .PHONY: all

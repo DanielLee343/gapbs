@@ -94,9 +94,9 @@ void run_damo_bg(pid_t cur_pid, char* damo_path) {
   
   std::sprintf(
       damo_cmd,
-      // "sudo %s record -s 1000 -a 100000 -u 1000000 -n 1024 -m 1024 -o %s %d",
-      "sudo %s record -s 1000 -a 100000 -u 1000000 "
-      "-n 5000 -m 6000 -o %s %d",
+      "sudo %s record -o %s %d",
+      // "sudo %s record -s 1000 -a 200000 -u 2000000 "
+      // "-n 20000 -m 22000 -o %s %d",
       damo_bin, damo_path_, cur_pid);
   int ret = system(damo_cmd);
   if (ret == -1) {
